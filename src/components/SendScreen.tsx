@@ -7,7 +7,6 @@ import {
   HardDrive,
   FolderTree,
   Wifi,
-  Sparkles,
   Zap,
   CheckCircle2,
   AlertCircle,
@@ -16,7 +15,11 @@ import {
   Music,
   Image as ImageIcon,
   Archive,
-  Code
+  Code,
+  Edit3,
+  User,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 import { DevicePeer, FileItem, AppSettings } from '../types';
 import { formatBytes, getFileCategory } from '../utils/formatters';
@@ -28,6 +31,7 @@ interface SendScreenProps {
   setSelectedDevice: (device: DevicePeer | null) => void;
   onStartTransfer: (items: FileItem[], targetDevice: DevicePeer, isFolder: boolean, folderName?: string) => void;
   settings: AppSettings;
+  onOpenEditUser: () => void;
 }
 
 export const SendScreen: React.FC<SendScreenProps> = ({
@@ -36,6 +40,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
   setSelectedDevice,
   onStartTransfer,
   settings,
+  onOpenEditUser,
 }) => {
   const [selectedItems, setSelectedItems] = useState<FileItem[]>([]);
   const [isFolderMode, setIsFolderMode] = useState(false);
@@ -46,7 +51,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to get category icon
   const getFileIcon = (filename: string) => {
     const cat = getFileCategory(filename);
     switch (cat) {
@@ -59,7 +63,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
     }
   };
 
-  // Handle files selected via file dialog
   const handleFilesChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
@@ -79,12 +82,10 @@ export const SendScreen: React.FC<SendScreenProps> = ({
     setErrorMsg(null);
   };
 
-  // Handle entire folder selected via directory dialog
   const handleFolderChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
     
-    // Extract root folder name from relative path
     const firstRel = (files[0] as unknown as { webkitRelativePath?: string }).webkitRelativePath || '';
     const rootName = firstRel.split('/')[0] || 'مجلد مخصص';
 
@@ -108,7 +109,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
     setErrorMsg(null);
   };
 
-  // Drag and drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -138,7 +138,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
     setIsFolderMode(false);
   };
 
-  // Load ready-to-test Demo Datasets
   const loadDemoFolder = () => {
     const demoFolderFiles: FileItem[] = [
       { id: 'df-1', name: 'MainActivity.kt', size: 14 * 1024, type: 'text/x-kotlin', relativePath: 'WiFiSharePro/app/src/main/java/MainActivity.kt', progress: 0, status: 'pending' },
@@ -183,7 +182,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
   const totalBytes = selectedItems.reduce((acc, item) => acc + item.size, 0);
 
-  // Validate and start transfer
   const handleStart = () => {
     if (selectedItems.length === 0) {
       setErrorMsg('يرجى اختيار ملفات أو مجلد أولاً');
@@ -199,16 +197,35 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner with Material 3 Elevation */}
-      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-indigo-900 via-indigo-800 to-slate-900 p-6 sm:p-8 text-white shadow-lg">
+      {/* Top Banner with Material 3 Elevation & User identity bar */}
+      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-indigo-900 via-indigo-800 to-slate-900 p-6 sm:p-8 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-indigo-200 text-xs font-medium mb-3 backdrop-blur-xs">
-              <Zap className="w-3.5 h-3.5 text-amber-300" />
-              <span>نطاق 5 جيجاهرتز Wi-Fi 6 فائق السرعة</span>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-indigo-200 text-xs font-semibold backdrop-blur-xs">
+                <Zap className="w-3.5 h-3.5 text-amber-300" />
+                <span>نطاق 5 جيجاهرتز Wi-Fi 6 فائق السرعة</span>
+              </div>
+
+              {/* User indicator & quick change button */}
+              <button
+                onClick={onOpenEditUser}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/30 hover:bg-indigo-500/50 text-white text-xs font-bold border border-indigo-400/30 backdrop-blur-xs cursor-pointer transition-colors"
+                title="تغيير اسمك وهويتك"
+              >
+                <div
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black"
+                  style={{ backgroundColor: settings.userAvatarColor || '#4F46E5' }}
+                >
+                  {(settings.userName || 'س').slice(0, 1)}
+                </div>
+                <span>المرسل: {settings.userName || 'سامي القادري'}</span>
+                <Edit3 className="w-3 h-3 text-indigo-200" />
+              </button>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               إرسال الملفات والمجلدات بالكامل
             </h2>
             <p className="mt-2 text-indigo-100 text-sm sm:text-base max-w-2xl leading-relaxed">
@@ -218,17 +235,17 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
           {/* Quick Demo Pickers */}
           <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
-            <span className="text-xs text-indigo-200 font-semibold mb-0.5">نماذج تجربة سريعة:</span>
+            <span className="text-xs text-indigo-200 font-bold mb-0.5">نماذج تجربة سريعة:</span>
             <button
               onClick={loadDemoFolder}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer border border-white/10"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
             >
               <FolderTree className="w-4 h-4 text-emerald-300" />
               <span>مجلد مشروع كامل (6 ملفات)</span>
             </button>
             <button
               onClick={loadDemoLargeFile}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer border border-white/10"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
             >
               <Film className="w-4 h-4 text-amber-300" />
               <span>فيديو 4K ضخم (1.42 GB)</span>
@@ -241,7 +258,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: File & Folder Pickers */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Hidden inputs */}
           <input
             type="file"
             multiple
@@ -264,13 +280,13 @@ export const SendScreen: React.FC<SendScreenProps> = ({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`relative rounded-3xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+            className={`relative rounded-3xl border-2 border-dashed p-8 text-center transition-all duration-200 shadow-xs ${
               isDragging
-                ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/30 scale-[1.01]'
-                : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 hover:border-indigo-400'
+                ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/40 scale-[1.01]'
+                : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-400'
             }`}
           >
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 shadow-xs">
+            <div className="mx-auto w-16 h-16 rounded-3xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 shadow-sm">
               <UploadCloud className="w-8 h-8" />
             </div>
 
@@ -286,7 +302,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
               >
                 <FilePlus className="w-4 h-4" />
                 <span>اختيار ملفات</span>
@@ -295,7 +311,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               <button
                 type="button"
                 onClick={() => folderInputRef.current?.click()}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
               >
                 <FolderUp className="w-4 h-4" />
                 <span>إرسال مجلد بالكامل</span>
@@ -305,8 +321,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
           {/* Selected Items List & Folder Inspector */}
           {selectedItems.length > 0 && (
-            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
-              {/* Header */}
+            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2.5">
                   {isFolderMode ? (
@@ -326,7 +341,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
                 <button
                   onClick={clearAll}
-                  className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                  className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600 font-bold px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>تفريغ القائمة</span>
@@ -334,7 +349,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               </div>
 
               {/* Items scroll */}
-              <div className="mt-3 divide-y divide-slate-100 dark:divide-slate-800/60 max-h-72 overflow-y-auto pr-1">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/60 max-h-72 overflow-y-auto pr-1">
                 {selectedItems.map((item) => (
                   <div
                     key={item.id}
@@ -361,7 +376,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -383,7 +398,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
                 </h3>
               </div>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                {nearbyDevices.length} جهاز متصل
+                {nearbyDevices.length} أجهزة
               </span>
             </div>
 
@@ -407,7 +422,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-xs"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-xs"
                         style={{ backgroundColor: device.avatarColor }}
                       >
                         {device.name.slice(0, 1)}
@@ -441,7 +456,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               })}
             </div>
 
-            {/* Error banner if any */}
             {errorMsg && (
               <div className="mt-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -449,29 +463,11 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               </div>
             )}
 
-            {/* Transfer Specs Summary */}
-            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-              <div className="flex justify-between">
-                <span>حجم البافر المقترح:</span>
-                <span className="font-semibold text-slate-900 dark:text-slate-200">{settings.chunkSizeKB} KB (فائق)</span>
-              </div>
-              <div className="flex justify-between">
-                <span>التحقق من سلامة البيانات:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">SHA-256 فحص فوري</span>
-              </div>
-              <div className="flex justify-between">
-                <span>مسار الحفظ الافتراضي للمستلم:</span>
-                <span className="font-mono text-[10px] text-slate-500 truncate max-w-[170px] dir-ltr text-left">
-                  {settings.savePath}
-                </span>
-              </div>
-            </div>
-
             {/* Launch Transfer Button */}
             <button
               onClick={handleStart}
               disabled={selectedItems.length === 0}
-              className={`mt-5 w-full py-3.5 px-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
+              className={`mt-5 w-full py-3.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
                 selectedItems.length > 0
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30'
                   : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none'
@@ -486,9 +482,8 @@ export const SendScreen: React.FC<SendScreenProps> = ({
             </button>
           </div>
 
-          {/* Developer credit banner */}
           <div className="rounded-2xl p-3.5 bg-indigo-50/60 dark:bg-slate-800/50 border border-indigo-100 dark:border-slate-800 text-center">
-            <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-400">
+            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400">
               تطوير: سامي القادري 777484160
             </span>
           </div>

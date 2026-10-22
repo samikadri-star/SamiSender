@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Wifi,
   Radio,
@@ -9,9 +9,9 @@ import {
   Sparkles,
   Smartphone,
   Laptop,
-  CheckCircle,
   Copy,
-  Check
+  Check,
+  Edit3
 } from 'lucide-react';
 import { DevicePeer, AppSettings, FileItem } from '../types';
 import { generateSyntheticSHA256 } from '../utils/crypto';
@@ -20,16 +20,18 @@ interface ReceiveScreenProps {
   nearbyDevices: DevicePeer[];
   settings: AppSettings;
   onSimulateIncomingTransfer: (items: FileItem[], senderPeer: DevicePeer, isFolder: boolean, folderName?: string) => void;
+  onOpenEditUser: () => void;
 }
 
 export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
   nearbyDevices,
   settings,
   onSimulateIncomingTransfer,
+  onOpenEditUser,
 }) => {
   const [isScanning, setIsScanning] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [pairingCode] = useState('777-484'); // Inspired by developer number 777484160!
+  const [pairingCode] = useState('777-484');
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(pairingCode);
@@ -37,7 +39,6 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  // Simulate incoming folder transfer from nearby device
   const triggerSampleIncomingFolder = () => {
     const sender = nearbyDevices[0] || {
       id: 'dev-incoming',
@@ -67,7 +68,7 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
       {
         id: `inc-file-${Date.now()}`,
         name: 'أرشيف_الملفات_الضخمة_2026.iso',
-        size: 980 * 1024 * 1024, // 980 MB
+        size: 980 * 1024 * 1024,
         type: 'application/x-iso-image',
         progress: 0,
         status: 'pending',
@@ -80,35 +81,53 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="rounded-3xl bg-linear-to-r from-emerald-900 via-teal-900 to-slate-900 p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="rounded-3xl bg-linear-to-r from-emerald-900 via-teal-900 to-slate-900 p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute -left-10 -bottom-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-medium mb-3 backdrop-blur-xs">
-              <Radio className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
-              <span>البحث التلقائي عن الأجهزة القريبة قيد التشغيل</span>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-semibold backdrop-blur-xs">
+                <Radio className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+                <span>البحث التلقائي عن الأجهزة القريبة قيد التشغيل</span>
+              </div>
+
+              {/* User indicator & quick change button */}
+              <button
+                onClick={onOpenEditUser}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/30 hover:bg-emerald-500/50 text-white text-xs font-bold border border-emerald-400/30 backdrop-blur-xs cursor-pointer transition-colors"
+                title="تعديل اسمك المعروض في الرادار"
+              >
+                <div
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black"
+                  style={{ backgroundColor: settings.userAvatarColor || '#4F46E5' }}
+                >
+                  {(settings.userName || 'س').slice(0, 1)}
+                </div>
+                <span>المستلم: {settings.userName || 'سامي القادري'}</span>
+                <Edit3 className="w-3 h-3 text-emerald-200" />
+              </button>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               شاشة استقبال الملفات والمجلدات
             </h2>
             <p className="mt-2 text-emerald-100 text-sm sm:text-base max-w-2xl leading-relaxed">
-              جهازك الآن قابل للاكتشاف عبر شبكة الواي فاي المحلية. يمكنك استقبال الملفات والمجلدات فوراً مع حفظها في المسار المخصص ومطابقة SHA-256.
+              جهازك الآن قابل للاكتشاف التلقائي عبر شبكة الواي فاي المحلية. يمكنك استقبال الملفات والمجلدات فوراً مع حفظها في المسار المخصص ومطابقة SHA-256.
             </p>
           </div>
 
-          {/* Quick simulation buttons for immediate testing */}
           <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
-            <span className="text-xs text-emerald-200 font-semibold mb-0.5">اختبار استقبال فوري:</span>
+            <span className="text-xs text-emerald-200 font-bold mb-0.5">اختبار استقبال فوري:</span>
             <button
               onClick={triggerSampleIncomingFolder}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer border border-white/10"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
             >
               <FolderDown className="w-4 h-4 text-emerald-300" />
               <span>تجربة استقبال مجلد كامل (625 MB)</span>
             </button>
             <button
               onClick={triggerSampleIncomingFile}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer border border-white/10"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
               <span>تجربة استقبال ملف ضخم (980 MB)</span>
@@ -145,33 +164,33 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
 
             {/* Visual Radar Container */}
             <div className="relative mx-auto my-8 w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
-              {/* Radar concentric rings */}
               <div className="absolute inset-0 rounded-full border border-emerald-500/20 dark:border-emerald-400/20" />
               <div className="absolute inset-8 rounded-full border border-emerald-500/25 dark:border-emerald-400/25" />
               <div className="absolute inset-16 rounded-full border border-emerald-500/30 dark:border-emerald-400/30" />
               <div className="absolute inset-24 rounded-full border border-emerald-500/40 dark:border-emerald-400/40" />
 
-              {/* Pulsing radar waves */}
               {isScanning && (
                 <>
                   <div className="absolute w-24 h-24 rounded-full bg-emerald-500/20 animate-radar-1 pointer-events-none" />
                   <div className="absolute w-24 h-24 rounded-full bg-emerald-500/20 animate-radar-2 pointer-events-none" />
                   <div className="absolute w-24 h-24 rounded-full bg-emerald-500/20 animate-radar-3 pointer-events-none" />
-                  {/* Rotating sweep line */}
                   <div className="absolute inset-0 flex items-center justify-center animate-sweep pointer-events-none">
                     <div className="w-1/2 h-0.5 bg-linear-to-r from-transparent to-emerald-500 shadow-sm shadow-emerald-500/50 origin-right" />
                   </div>
                 </>
               )}
 
-              {/* Center device icon */}
-              <div className="relative z-10 w-16 h-16 rounded-3xl bg-linear-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30">
-                <Smartphone className="w-8 h-8" />
+              {/* Center device icon with user avatar */}
+              <div
+                className="relative z-10 w-16 h-16 rounded-3xl text-white flex items-center justify-center shadow-lg text-xl font-black ring-4 ring-white dark:ring-slate-900"
+                style={{ backgroundColor: settings.userAvatarColor || '#059669' }}
+                title={settings.userName || 'أنت (المستلم)'}
+              >
+                {(settings.userName || 'س').slice(0, 1)}
               </div>
 
-              {/* Discovered nearby peer nodes plotted in radar */}
+              {/* Discovered nearby peer nodes */}
               {nearbyDevices.map((dev, i) => {
-                // Pre-calculated orbital positions
                 const angles = [45, 140, 230, 310];
                 const distances = [90, 80, 100, 75];
                 const angle = angles[i % angles.length] * (Math.PI / 180);
@@ -255,20 +274,36 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
 
         {/* Right Column: Host Info, QR Code & Pairing */}
         <div className="space-y-6">
-          {/* Host info card */}
+          {/* Host info card with username edit button */}
           <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <Laptop className="w-6 h-6" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-sm"
+                  style={{ backgroundColor: settings.userAvatarColor || '#059669' }}
+                >
+                  {(settings.userName || 'س').slice(0, 1)}
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                    هذا الجهاز (المستلم)
+                  </span>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                    {settings.userName || 'سامي القادري'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {settings.deviceName}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                  هذا الجهاز (المستلم)
-                </span>
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  {settings.deviceName}
-                </h3>
-              </div>
+
+              <button
+                onClick={onOpenEditUser}
+                className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="تعديل اسم المستخدم والجهاز"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
             </div>
 
             <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -305,30 +340,27 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
               يمكن للجهاز المرسل إدخال هذا الرمز للاقتران المباشر:
             </p>
 
-            {/* Visual Pairing Code */}
             <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
               <span className="font-mono text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-widest">
                 {pairingCode}
               </span>
               <button
                 onClick={handleCopyCode}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 title="نسخ الرمز"
               >
                 {copiedCode ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
 
-            {/* Security integrity note */}
             <div className="mt-5 p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 text-right">
               <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span>فحص تطابق البيانات SHA-256 يتم تلقائياً قبل حفظ أي ملف لضمان خلوه من أي عيوب أو أخطاء.</span>
             </div>
           </div>
 
-          {/* Developer signature */}
           <div className="rounded-2xl p-3.5 bg-emerald-50/60 dark:bg-slate-800/50 border border-emerald-100 dark:border-slate-800 text-center">
-            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
               تطوير: سامي القادري 777484160
             </span>
           </div>

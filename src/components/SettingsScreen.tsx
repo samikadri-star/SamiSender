@@ -32,8 +32,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   setSettings,
   onSaveToast,
 }) => {
-  const [savePath, setSavePath] = useState(settings.savePath);
+  const [userName, setUserName] = useState(settings.userName || 'سامي القادري');
   const [deviceName, setDeviceName] = useState(settings.deviceName);
+  const [avatarColor, setAvatarColor] = useState(settings.userAvatarColor || '#4F46E5');
+  const [savePath, setSavePath] = useState(settings.savePath);
   const [port, setPort] = useState(settings.port);
   const [chunkSize, setChunkSize] = useState(settings.chunkSizeKB);
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled);
@@ -53,8 +55,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleSave = () => {
     setSettings((prev) => ({
       ...prev,
+      userName: userName.trim() || 'سامي القادري',
+      deviceName: deviceName.trim() || 'جهاز أندرويد',
+      userAvatarColor: avatarColor,
       savePath,
-      deviceName,
       port: Number(port) || 8888,
       chunkSizeKB: chunkSize,
       soundEnabled,
@@ -82,8 +86,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   const handleResetDefaults = () => {
-    setSavePath(DEFAULT_SETTINGS.savePath);
+    setUserName(DEFAULT_SETTINGS.userName || 'سامي القادري');
     setDeviceName(DEFAULT_SETTINGS.deviceName);
+    setAvatarColor(DEFAULT_SETTINGS.userAvatarColor || '#4F46E5');
+    setSavePath(DEFAULT_SETTINGS.savePath);
     setPort(DEFAULT_SETTINGS.port);
     setChunkSize(DEFAULT_SETTINGS.chunkSizeKB);
     setSoundEnabled(DEFAULT_SETTINGS.soundEnabled);
@@ -102,7 +108,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <h2 className="text-2xl font-bold">إعدادات التطبيق ومسار الحفظ</h2>
           </div>
           <p className="text-slate-300 text-sm">
-            تخصيص مسار حفظ الملفات، بافر النقل، التنبيهات الصوتية، والوضع الليلي.
+            تخصيص اسم المستخدم، مسار حفظ الملفات، بافر النقل، التنبيهات الصوتية، والوضع الليلي.
           </p>
         </div>
 
@@ -117,6 +123,86 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
       {/* Main Settings Form */}
       <div className="space-y-6">
+        {/* Section 0: User Identity & Broadcast Name (Requirement 3) */}
+        <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-sm shrink-0"
+              style={{ backgroundColor: avatarColor }}
+            >
+              {(userName || 'س').slice(0, 1)}
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                هوية المستخدم واسم الجهاز في شبكة الواي فاي
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                الاسم والصورة الرمزية التي تظهر للأجهزة القريبة عند البحث والإرسال
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                اسم المستخدم الشخصي:
+              </label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="مثال: سامي القادري"
+                className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                اسم الجهاز:
+              </label>
+              <input
+                type="text"
+                value={deviceName}
+                onChange={(e) => setDeviceName(e.target.value)}
+                placeholder="مثال: سامسونج S24 ألترا"
+                className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Color Presets */}
+          <div className="pt-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+              لون الشعار والرمز التعريفي:
+            </label>
+            <div className="flex items-center gap-3">
+              {[
+                { label: 'نيلي', hex: '#4F46E5' },
+                { label: 'زمردي', hex: '#059669' },
+                { label: 'بنفسجي', hex: '#7C3AED' },
+                { label: 'ياقوتي', hex: '#E11D48' },
+                { label: 'كهرماني', hex: '#D97706' },
+                { label: 'سماوي', hex: '#0284C7' },
+              ].map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  onClick={() => setAvatarColor(c.hex)}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                    avatarColor === c.hex
+                      ? 'scale-115 ring-2 ring-offset-2 ring-indigo-500 shadow-md'
+                      : 'hover:scale-105 opacity-80'
+                  }`}
+                  style={{ backgroundColor: c.hex }}
+                  title={c.label}
+                >
+                  {avatarColor === c.hex && <Check className="w-3.5 h-3.5 text-white" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Section 1: Custom Save Path */}
         <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">

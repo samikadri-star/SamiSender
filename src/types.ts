@@ -81,13 +81,15 @@ export interface AppSettings {
   wifiBand: '5ghz' | '2.4ghz' | 'auto';
   port: number;
   deviceName: string;
+  userName: string;
+  userAvatarColor: string;
   theme: 'dark' | 'light' | 'system';
 }
 
 export interface KotlinCodeFile {
   name: string;
   path: string;
-  type: 'kotlin' | 'xml' | 'gradle' | 'json';
+  type: 'kotlin' | 'xml' | 'gradle' | 'json' | 'config';
   category: 'ui' | 'network' | 'service' | 'model' | 'layout' | 'values' | 'config';
   description: string;
   content: string;

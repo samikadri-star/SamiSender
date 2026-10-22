@@ -28,6 +28,7 @@ import { SettingsScreen } from './components/SettingsScreen';
 import { AndroidCodeStudio } from './components/AndroidCodeStudio';
 import { TransferModal } from './components/TransferModal';
 import { AboutDialog } from './components/AboutDialog';
+import { EditUserDialog } from './components/EditUserDialog';
 import { soundManager } from './utils/audio';
 import { formatBytes, formatSpeed } from './utils/formatters';
 import { calculateFileSHA256, generateSyntheticSHA256 } from './utils/crypto';
@@ -43,6 +44,7 @@ export default function App() {
   // Active transfer state
   const [activeSession, setActiveSession] = useState<ActiveTransferSession | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const transferIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -300,6 +302,7 @@ export default function App() {
         settings={settings}
         setSettings={setSettings}
         onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenEditUser={() => setIsEditUserOpen(true)}
       />
 
       {/* Main Screen Container */}
@@ -313,6 +316,7 @@ export default function App() {
               startTransferSession(items, target, 'send', isFolder, folderName)
             }
             settings={settings}
+            onOpenEditUser={() => setIsEditUserOpen(true)}
           />
         )}
 
@@ -323,6 +327,7 @@ export default function App() {
             onSimulateIncomingTransfer={(items, sender, isFolder, folderName) =>
               startTransferSession(items, sender, 'receive', isFolder, folderName)
             }
+            onOpenEditUser={() => setIsEditUserOpen(true)}
           />
         )}
 
@@ -360,6 +365,15 @@ export default function App() {
 
       {/* Developer & Specs Dialog */}
       <AboutDialog isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+
+      {/* Edit User Name & Device Dialog */}
+      <EditUserDialog
+        isOpen={isEditUserOpen}
+        onClose={() => setIsEditUserOpen(false)}
+        settings={settings}
+        setSettings={setSettings}
+        onSaveToast={(msg) => showToast(msg)}
+      />
 
       {/* In-app Toast Banner */}
       {toastMessage && (

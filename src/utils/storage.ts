@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   wifiBand: '5ghz',
   port: 8888,
   deviceName: 'هاتف سامسونج جالاكسي S24 ألترا',
+  userName: 'سامي القادري',
+  userAvatarColor: '#4F46E5',
   theme: 'dark',
 };
 
