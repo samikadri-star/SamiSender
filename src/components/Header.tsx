@@ -16,6 +16,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { AppSettings } from '../types';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   activeTab: 'send' | 'receive' | 'history' | 'settings' | 'kotlin';
@@ -83,6 +84,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* User Profile Badge & Quick Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* PWA Install Button */}
+            <PWAInstallButton />
+
             {/* User Name & Avatar Button (Requirement 3: Ability to change username) */}
             <button
               onClick={onOpenEditUser}

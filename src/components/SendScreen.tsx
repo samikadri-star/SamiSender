@@ -17,13 +17,13 @@ import {
   Archive,
   Code,
   Edit3,
-  User,
-  Layers,
-  ArrowRight
+  Radio,
+  RefreshCw,
+  FolderOpen
 } from 'lucide-react';
 import { DevicePeer, FileItem, AppSettings } from '../types';
 import { formatBytes, getFileCategory } from '../utils/formatters';
-import { generateSyntheticSHA256 } from '../utils/crypto';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface SendScreenProps {
   nearbyDevices: DevicePeer[];
@@ -138,38 +138,6 @@ export const SendScreen: React.FC<SendScreenProps> = ({
     setIsFolderMode(false);
   };
 
-  const loadDemoFolder = () => {
-    const demoFolderFiles: FileItem[] = [
-      { id: 'df-1', name: 'MainActivity.kt', size: 14 * 1024, type: 'text/x-kotlin', relativePath: 'WiFiSharePro/app/src/main/java/MainActivity.kt', progress: 0, status: 'pending' },
-      { id: 'df-2', name: 'activity_main.xml', size: 8 * 1024, type: 'application/xml', relativePath: 'WiFiSharePro/app/src/main/res/layout/activity_main.xml', progress: 0, status: 'pending' },
-      { id: 'df-3', name: 'HighSpeedTransferServer.kt', size: 28 * 1024, type: 'text/x-kotlin', relativePath: 'WiFiSharePro/app/src/main/java/network/HighSpeedTransferServer.kt', progress: 0, status: 'pending' },
-      { id: 'df-4', name: 'background_video_demo.mp4', size: 184 * 1024 * 1024, type: 'video/mp4', relativePath: 'WiFiSharePro/assets/media/background_video_demo.mp4', progress: 0, status: 'pending' },
-      { id: 'df-5', name: 'architecture_diagram.png', size: 4 * 1024 * 1024, type: 'image/png', relativePath: 'WiFiSharePro/docs/architecture_diagram.png', progress: 0, status: 'pending' },
-      { id: 'df-6', name: 'build.gradle.kts', size: 3 * 1024, type: 'application/x-gradle', relativePath: 'WiFiSharePro/app/build.gradle.kts', progress: 0, status: 'pending' },
-    ];
-    setSelectedItems(demoFolderFiles);
-    setIsFolderMode(true);
-    setFolderName('WiFiSharePro_Android_Project');
-    setErrorMsg(null);
-  };
-
-  const loadDemoLargeFile = () => {
-    const demoLarge: FileItem[] = [
-      {
-        id: `large-demo-${Date.now()}`,
-        name: 'فيلم_وثائقي_تقني_4K_HDR_WiFi6.mkv',
-        size: 1420 * 1024 * 1024, // 1.42 GB
-        type: 'video/x-matroska',
-        progress: 0,
-        status: 'pending',
-        sha256: generateSyntheticSHA256('demo-4k-video-1.42gb'),
-      },
-    ];
-    setSelectedItems(demoLarge);
-    setIsFolderMode(false);
-    setErrorMsg(null);
-  };
-
   const removeItem = (id: string) => {
     setSelectedItems((prev) => prev.filter((item) => item.id !== id));
   };
@@ -184,11 +152,11 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
   const handleStart = () => {
     if (selectedItems.length === 0) {
-      setErrorMsg('يرجى اختيار ملفات أو مجلد أولاً');
+      setErrorMsg('يرجى اختيار ملفات أو مجلد حقيقي أولاً');
       return;
     }
     if (!selectedDevice) {
-      setErrorMsg('يرجى اختيار الجهاز المستلم من قائمة الأجهزة القريبة');
+      setErrorMsg('يرجى اختيار الجهاز المستلم من قائمة الأجهزة المتصلة');
       return;
     }
     setErrorMsg(null);
@@ -197,6 +165,9 @@ export const SendScreen: React.FC<SendScreenProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* PWA Install Banner */}
+      <PWAInstallButton variant="banner" />
+
       {/* Top Banner with Material 3 Elevation & User identity bar */}
       <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-indigo-900 via-indigo-800 to-slate-900 p-6 sm:p-8 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -226,29 +197,20 @@ export const SendScreen: React.FC<SendScreenProps> = ({
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-              إرسال الملفات والمجلدات بالكامل
+              إرسال الملفات والمجلدات الحقيقية
             </h2>
             <p className="mt-2 text-indigo-100 text-sm sm:text-base max-w-2xl leading-relaxed">
-              انقل ملفاتك الضخمة ومجلداتك المعقدة بسرعة تصل إلى 100 ميجابايت/ثانية بدون الحاجة إلى اتصال إنترنت مع ضمان سلامة البيانات عبر تشفير SHA-256.
+              اختر ملفاتك أو مجلداتك من جهازك وأرسلها مباشرة عبر شبكة الواي فاي إلى الجهاز المستلم بدون إنترنت مع التحقق الفوري من سلامة التجزئة SHA-256.
             </p>
           </div>
 
-          {/* Quick Demo Pickers */}
-          <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
-            <span className="text-xs text-indigo-200 font-bold mb-0.5">نماذج تجربة سريعة:</span>
+          <div className="flex items-center gap-3">
             <button
-              onClick={loadDemoFolder}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
+              onClick={() => folderInputRef.current?.click()}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all cursor-pointer shrink-0"
             >
-              <FolderTree className="w-4 h-4 text-emerald-300" />
-              <span>مجلد مشروع كامل (6 ملفات)</span>
-            </button>
-            <button
-              onClick={loadDemoLargeFile}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
-            >
-              <Film className="w-4 h-4 text-amber-300" />
-              <span>فيديو 4K ضخم (1.42 GB)</span>
+              <FolderOpen className="w-4 h-4" />
+              <span>إرسال مجلد بالكامل</span>
             </button>
           </div>
         </div>
@@ -294,7 +256,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               اسحب وأفلت الملفات أو المجلدات هنا
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-              يدعم إرسال جميع أنواع الملفات (فيديو، صوت، تطبيقات APK، مستندات) ومجلدات كاملة مع الحفاظ على هيكل المجلدات الداخلي.
+              اختر ملفات من ذاكرة هاتفك أو حاسوبك (فيديوهات، صور، تطبيقات APK، مستندات) أو اختر مجلداً كاملاً لنقله بهيكليته الكاملة.
             </p>
 
             {/* Action Buttons */}
@@ -305,7 +267,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
                 className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
               >
                 <FilePlus className="w-4 h-4" />
-                <span>اختيار ملفات</span>
+                <span>اختيار ملفات من الجهاز</span>
               </button>
 
               <button
@@ -314,7 +276,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
                 className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
               >
                 <FolderUp className="w-4 h-4" />
-                <span>إرسال مجلد بالكامل</span>
+                <span>اختيار مجلد بالكامل</span>
               </button>
             </div>
           </div>
@@ -387,74 +349,91 @@ export const SendScreen: React.FC<SendScreenProps> = ({
           )}
         </div>
 
-        {/* Right Col: Target Device Selection & Transfer Initiation */}
+        {/* Right Col: Target Device Selection */}
         <div className="space-y-4">
           <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Wifi className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  الأجهزة المستلمة القريبة
+                  الأجهزة المستلمة النشطة
                 </h3>
               </div>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                {nearbyDevices.length} أجهزة
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                nearbyDevices.length > 0
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+              }`}>
+                {nearbyDevices.length} متصل
               </span>
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-              اختر الجهاز الذي ترغب بإرسال الملفات إليه عبر اتصال الواي فاي المباشر:
-            </p>
-
-            {/* Devices list */}
-            <div className="space-y-2.5">
-              {nearbyDevices.map((device) => {
-                const isSelected = selectedDevice?.id === device.id;
-                return (
-                  <div
-                    key={device.id}
-                    onClick={() => setSelectedDevice(device)}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                      isSelected
-                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-xs"
-                        style={{ backgroundColor: device.avatarColor }}
-                      >
-                        {device.name.slice(0, 1)}
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
-                          {device.name}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                            {device.ipAddress}
-                          </span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                            {device.frequency}
-                          </span>
+            {/* Devices list or Waiting state */}
+            {nearbyDevices.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
+                  <Radio className="w-6 h-6 text-indigo-600 dark:text-indigo-400 relative z-10" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    بانتظار ظهور جهاز مستلم...
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    افتح التطبيق في جهازك الآخر (أو افتح تبويباً جديداً في المتصفح) على شاشة <strong>"استقبال"</strong> ليتم اكتشافه فوراً بالرادار!
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {nearbyDevices.map((device) => {
+                  const isSelected = selectedDevice?.id === device.id;
+                  return (
+                    <div
+                      key={device.id}
+                      onClick={() => setSelectedDevice(device)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-xs"
+                          style={{ backgroundColor: device.avatarColor }}
+                        >
+                          {device.name.slice(0, 1)}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                            {device.name}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                              {device.ipAddress}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                              {device.frequency}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col items-end">
-                      {isSelected ? (
-                        <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                      ) : (
-                        <span className="text-xs text-slate-400 font-medium">
-                          {device.signalStrength}%
-                        </span>
-                      )}
+                      <div className="flex flex-col items-end">
+                        {isSelected ? (
+                          <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        ) : (
+                          <span className="text-xs text-slate-400 font-medium">
+                            {device.signalStrength}%
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
             {errorMsg && (
               <div className="mt-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
@@ -476,7 +455,7 @@ export const SendScreen: React.FC<SendScreenProps> = ({
               <Zap className="w-4 h-4 text-amber-300" />
               <span>
                 {selectedItems.length > 0
-                  ? `بدء الإرسال فائق السرعة (${formatBytes(totalBytes)})`
+                  ? `بدء الإرسال الحقيقي (${formatBytes(totalBytes)})`
                   : 'حدد الملفات أو المجلد أولاً'}
               </span>
             </button>

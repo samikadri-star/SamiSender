@@ -13,20 +13,18 @@ import {
   Check,
   Edit3
 } from 'lucide-react';
-import { DevicePeer, AppSettings, FileItem } from '../types';
-import { generateSyntheticSHA256 } from '../utils/crypto';
+import { DevicePeer, AppSettings } from '../types';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface ReceiveScreenProps {
   nearbyDevices: DevicePeer[];
   settings: AppSettings;
-  onSimulateIncomingTransfer: (items: FileItem[], senderPeer: DevicePeer, isFolder: boolean, folderName?: string) => void;
   onOpenEditUser: () => void;
 }
 
 export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
   nearbyDevices,
   settings,
-  onSimulateIncomingTransfer,
   onOpenEditUser,
 }) => {
   const [isScanning, setIsScanning] = useState(true);
@@ -39,47 +37,11 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const triggerSampleIncomingFolder = () => {
-    const sender = nearbyDevices[0] || {
-      id: 'dev-incoming',
-      name: 'سامسونج S24 ألترا (المرسل)',
-      deviceType: 'android',
-      ipAddress: '192.168.1.120',
-      port: 8888,
-      signalStrength: 95,
-      frequency: '5 GHz (Wi-Fi 6)',
-      status: 'available',
-      avatarColor: '#4F46E5',
-    };
-
-    const incomingFolderFiles: FileItem[] = [
-      { id: 'inc-1', name: 'Kotlin_Wi-Fi_Direct_Guide.pdf', size: 18 * 1024 * 1024, type: 'application/pdf', relativePath: 'مجلد_المشروع_الكامل/Kotlin_Wi-Fi_Direct_Guide.pdf', progress: 0, status: 'pending' },
-      { id: 'inc-2', name: 'SourceCode_WiFiSharePro.zip', size: 125 * 1024 * 1024, type: 'application/zip', relativePath: 'مجلد_المشروع_الكامل/SourceCode_WiFiSharePro.zip', progress: 0, status: 'pending' },
-      { id: 'inc-3', name: 'Demo_Video_4K_100Mbps.mp4', size: 450 * 1024 * 1024, type: 'video/mp4', relativePath: 'مجلد_المشروع_الكامل/Media/Demo_Video_4K_100Mbps.mp4', progress: 0, status: 'pending' },
-      { id: 'inc-4', name: 'App_Release_v1.0.apk', size: 32 * 1024 * 1024, type: 'application/vnd.android.package-archive', relativePath: 'مجلد_المشروع_الكامل/Builds/App_Release_v1.0.apk', progress: 0, status: 'pending' },
-    ];
-
-    onSimulateIncomingTransfer(incomingFolderFiles, sender, true, 'مجلد_المشروع_الكامل');
-  };
-
-  const triggerSampleIncomingFile = () => {
-    const sender = nearbyDevices[1] || nearbyDevices[0];
-    const incomingFile: FileItem[] = [
-      {
-        id: `inc-file-${Date.now()}`,
-        name: 'أرشيف_الملفات_الضخمة_2026.iso',
-        size: 980 * 1024 * 1024,
-        type: 'application/x-iso-image',
-        progress: 0,
-        status: 'pending',
-        sha256: generateSyntheticSHA256('archive-iso-2026'),
-      },
-    ];
-    onSimulateIncomingTransfer(incomingFile, sender, false);
-  };
-
   return (
     <div className="space-y-6">
+      {/* PWA Install Banner */}
+      <PWAInstallButton variant="banner" />
+
       {/* Top Banner */}
       <div className="rounded-3xl bg-linear-to-r from-emerald-900 via-teal-900 to-slate-900 p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute -left-10 -bottom-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -88,7 +50,7 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-semibold backdrop-blur-xs">
                 <Radio className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
-                <span>البحث التلقائي عن الأجهزة القريبة قيد التشغيل</span>
+                <span>رادار استقبال الملفات الحقيقي قيد الاستماع</span>
               </div>
 
               {/* User indicator & quick change button */}
@@ -112,26 +74,18 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
               شاشة استقبال الملفات والمجلدات
             </h2>
             <p className="mt-2 text-emerald-100 text-sm sm:text-base max-w-2xl leading-relaxed">
-              جهازك الآن قابل للاكتشاف التلقائي عبر شبكة الواي فاي المحلية. يمكنك استقبال الملفات والمجلدات فوراً مع حفظها في المسار المخصص ومطابقة SHA-256.
+              جهازك الآن قابل للاكتشاف التلقائي عبر شبكة الواي فاي. عند قيام أي جهاز بإرسال ملفات أو مجلد إليك، ستظهر نافذة فورية لتأكيد الاستقبال وحفظ البيانات مع فحص SHA-256.
             </p>
           </div>
 
-          <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
-            <span className="text-xs text-emerald-200 font-bold mb-0.5">اختبار استقبال فوري:</span>
-            <button
-              onClick={triggerSampleIncomingFolder}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
-            >
-              <FolderDown className="w-4 h-4 text-emerald-300" />
-              <span>تجربة استقبال مجلد كامل (625 MB)</span>
-            </button>
-            <button
-              onClick={triggerSampleIncomingFile}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-white/10 shadow-xs"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>تجربة استقبال ملف ضخم (980 MB)</span>
-            </button>
+          <div className="flex flex-col gap-2 shrink-0">
+            <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 text-center">
+              <span className="text-xs text-emerald-200 font-bold block mb-1">حالة الاستماع للشبكة:</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>جاهز لاستقبال البيانات الحقيقية</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -189,7 +143,7 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
                 {(settings.userName || 'س').slice(0, 1)}
               </div>
 
-              {/* Discovered nearby peer nodes */}
+              {/* Real discovered nearby peer nodes plotted in radar */}
               {nearbyDevices.map((dev, i) => {
                 const angles = [45, 140, 230, 310];
                 const distances = [90, 80, 100, 75];
@@ -217,64 +171,63 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
             </div>
 
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              تم اكتشاف <span className="text-emerald-600 dark:text-emerald-400 font-bold">{nearbyDevices.length} أجهزة</span> نشطة في نطاق الواي فاي
+              {nearbyDevices.length > 0 ? (
+                <>تم العثور على <span className="text-emerald-600 dark:text-emerald-400 font-bold">{nearbyDevices.length} أجهزة حقيقية</span> متصلة بالشبكة</>
+              ) : (
+                <>الرادار نشط وبانتظار ظهور أي جهاز مرسل عبر شبكة الواي فاي</>
+              )}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              البروتوكول المستخدم: TCP High-Speed NIO Socket عبر المنفذ {settings.port}
+              منفذ الاستماع المباشر: {settings.port} • بث وجود الجهاز عبر Wi-Fi Broadcast
             </p>
           </div>
 
           {/* List of nearby discovered devices */}
-          <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
-            <h4 className="font-bold text-slate-900 dark:text-white text-base mb-3">
-              الأجهزة المتاحة للإرسال والاستقبال
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {nearbyDevices.map((dev) => (
-                <div
-                  key={dev.id}
-                  className="p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-                      style={{ backgroundColor: dev.avatarColor }}
-                    >
-                      {dev.name.slice(0, 1)}
+          {nearbyDevices.length > 0 && (
+            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
+              <h4 className="font-bold text-slate-900 dark:text-white text-base mb-3">
+                الأجهزة النشطة في الشبكة
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {nearbyDevices.map((dev) => (
+                  <div
+                    key={dev.id}
+                    className="p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+                        style={{ backgroundColor: dev.avatarColor }}
+                      >
+                        {dev.name.slice(0, 1)}
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                          {dev.name}
+                        </h5>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                          {dev.ipAddress}
+                        </p>
+                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          {dev.frequency}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <h5 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                        {dev.name}
-                      </h5>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                        {dev.ipAddress}
-                      </p>
-                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                        {dev.frequency}
+
+                    <div className="text-left">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        {dev.signalStrength}%
                       </span>
                     </div>
                   </div>
-
-                  <div className="text-left">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {dev.signalStrength}%
-                    </span>
-                    <div className="w-10 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 mt-1 overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full"
-                        style={{ width: `${dev.signalStrength}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Column: Host Info, QR Code & Pairing */}
         <div className="space-y-6">
-          {/* Host info card with username edit button */}
           <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -328,12 +281,11 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
             </div>
           </div>
 
-          {/* Quick Pairing Code & QR */}
           <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <QrCode className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                رمز الاقتران السريع
+                رمز الاقتران المباشر
               </h4>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
@@ -355,7 +307,7 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({
 
             <div className="mt-5 p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 text-right">
               <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span>فحص تطابق البيانات SHA-256 يتم تلقائياً قبل حفظ أي ملف لضمان خلوه من أي عيوب أو أخطاء.</span>
+              <span>فحص تطابق البيانات SHA-256 يتم تلقائياً لكل ملف مستلم لضمان اكتماله 100%.</span>
             </div>
           </div>
 
