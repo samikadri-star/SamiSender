@@ -1,0 +1,499 @@
+import React, { useState, useRef } from 'react';
+import {
+  UploadCloud,
+  FolderUp,
+  FilePlus,
+  Trash2,
+  HardDrive,
+  FolderTree,
+  Wifi,
+  Sparkles,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  Film,
+  Music,
+  Image as ImageIcon,
+  Archive,
+  Code
+} from 'lucide-react';
+import { DevicePeer, FileItem, AppSettings } from '../types';
+import { formatBytes, getFileCategory } from '../utils/formatters';
+import { generateSyntheticSHA256 } from '../utils/crypto';
+
+interface SendScreenProps {
+  nearbyDevices: DevicePeer[];
+  selectedDevice: DevicePeer | null;
+  setSelectedDevice: (device: DevicePeer | null) => void;
+  onStartTransfer: (items: FileItem[], targetDevice: DevicePeer, isFolder: boolean, folderName?: string) => void;
+  settings: AppSettings;
+}
+
+export const SendScreen: React.FC<SendScreenProps> = ({
+  nearbyDevices,
+  selectedDevice,
+  setSelectedDevice,
+  onStartTransfer,
+  settings,
+}) => {
+  const [selectedItems, setSelectedItems] = useState<FileItem[]>([]);
+  const [isFolderMode, setIsFolderMode] = useState(false);
+  const [folderName, setFolderName] = useState<string>('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to get category icon
+  const getFileIcon = (filename: string) => {
+    const cat = getFileCategory(filename);
+    switch (cat) {
+      case 'video': return <Film className="w-5 h-5 text-rose-500" />;
+      case 'audio': return <Music className="w-5 h-5 text-amber-500" />;
+      case 'image': return <ImageIcon className="w-5 h-5 text-emerald-500" />;
+      case 'archive': return <Archive className="w-5 h-5 text-purple-500" />;
+      case 'code': return <Code className="w-5 h-5 text-blue-500" />;
+      default: return <FileText className="w-5 h-5 text-indigo-500" />;
+    }
+  };
+
+  // Handle files selected via file dialog
+  const handleFilesChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    
+    const newItems: FileItem[] = files.map((file, idx) => ({
+      id: `file-${Date.now()}-${idx}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      file: file,
+      progress: 0,
+      status: 'pending',
+    }));
+
+    setSelectedItems((prev) => [...prev, ...newItems]);
+    setIsFolderMode(false);
+    setErrorMsg(null);
+  };
+
+  // Handle entire folder selected via directory dialog
+  const handleFolderChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    
+    // Extract root folder name from relative path
+    const firstRel = (files[0] as unknown as { webkitRelativePath?: string }).webkitRelativePath || '';
+    const rootName = firstRel.split('/')[0] || 'مجلد مخصص';
+
+    const newItems: FileItem[] = files.map((file, idx) => {
+      const relPath = (file as unknown as { webkitRelativePath?: string }).webkitRelativePath || file.name;
+      return {
+        id: `folder-file-${Date.now()}-${idx}`,
+        name: file.name,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+        relativePath: relPath,
+        file: file,
+        progress: 0,
+        status: 'pending',
+      };
+    });
+
+    setSelectedItems(newItems);
+    setIsFolderMode(true);
+    setFolderName(rootName);
+    setErrorMsg(null);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const newItems: FileItem[] = files.map((file, idx) => ({
+      id: `dropped-${Date.now()}-${idx}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      file: file,
+      progress: 0,
+      status: 'pending',
+    }));
+
+    setSelectedItems((prev) => [...prev, ...newItems]);
+    setIsFolderMode(false);
+  };
+
+  // Load ready-to-test Demo Datasets
+  const loadDemoFolder = () => {
+    const demoFolderFiles: FileItem[] = [
+      { id: 'df-1', name: 'MainActivity.kt', size: 14 * 1024, type: 'text/x-kotlin', relativePath: 'WiFiSharePro/app/src/main/java/MainActivity.kt', progress: 0, status: 'pending' },
+      { id: 'df-2', name: 'activity_main.xml', size: 8 * 1024, type: 'application/xml', relativePath: 'WiFiSharePro/app/src/main/res/layout/activity_main.xml', progress: 0, status: 'pending' },
+      { id: 'df-3', name: 'HighSpeedTransferServer.kt', size: 28 * 1024, type: 'text/x-kotlin', relativePath: 'WiFiSharePro/app/src/main/java/network/HighSpeedTransferServer.kt', progress: 0, status: 'pending' },
+      { id: 'df-4', name: 'background_video_demo.mp4', size: 184 * 1024 * 1024, type: 'video/mp4', relativePath: 'WiFiSharePro/assets/media/background_video_demo.mp4', progress: 0, status: 'pending' },
+      { id: 'df-5', name: 'architecture_diagram.png', size: 4 * 1024 * 1024, type: 'image/png', relativePath: 'WiFiSharePro/docs/architecture_diagram.png', progress: 0, status: 'pending' },
+      { id: 'df-6', name: 'build.gradle.kts', size: 3 * 1024, type: 'application/x-gradle', relativePath: 'WiFiSharePro/app/build.gradle.kts', progress: 0, status: 'pending' },
+    ];
+    setSelectedItems(demoFolderFiles);
+    setIsFolderMode(true);
+    setFolderName('WiFiSharePro_Android_Project');
+    setErrorMsg(null);
+  };
+
+  const loadDemoLargeFile = () => {
+    const demoLarge: FileItem[] = [
+      {
+        id: `large-demo-${Date.now()}`,
+        name: 'فيلم_وثائقي_تقني_4K_HDR_WiFi6.mkv',
+        size: 1420 * 1024 * 1024, // 1.42 GB
+        type: 'video/x-matroska',
+        progress: 0,
+        status: 'pending',
+        sha256: generateSyntheticSHA256('demo-4k-video-1.42gb'),
+      },
+    ];
+    setSelectedItems(demoLarge);
+    setIsFolderMode(false);
+    setErrorMsg(null);
+  };
+
+  const removeItem = (id: string) => {
+    setSelectedItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const clearAll = () => {
+    setSelectedItems([]);
+    setIsFolderMode(false);
+    setFolderName('');
+  };
+
+  const totalBytes = selectedItems.reduce((acc, item) => acc + item.size, 0);
+
+  // Validate and start transfer
+  const handleStart = () => {
+    if (selectedItems.length === 0) {
+      setErrorMsg('يرجى اختيار ملفات أو مجلد أولاً');
+      return;
+    }
+    if (!selectedDevice) {
+      setErrorMsg('يرجى اختيار الجهاز المستلم من قائمة الأجهزة القريبة');
+      return;
+    }
+    setErrorMsg(null);
+    onStartTransfer(selectedItems, selectedDevice, isFolderMode, folderName);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Banner with Material 3 Elevation */}
+      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-indigo-900 via-indigo-800 to-slate-900 p-6 sm:p-8 text-white shadow-lg">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-indigo-200 text-xs font-medium mb-3 backdrop-blur-xs">
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>نطاق 5 جيجاهرتز Wi-Fi 6 فائق السرعة</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              إرسال الملفات والمجلدات بالكامل
+            </h2>
+            <p className="mt-2 text-indigo-100 text-sm sm:text-base max-w-2xl leading-relaxed">
+              انقل ملفاتك الضخمة ومجلداتك المعقدة بسرعة تصل إلى 100 ميجابايت/ثانية بدون الحاجة إلى اتصال إنترنت مع ضمان سلامة البيانات عبر تشفير SHA-256.
+            </p>
+          </div>
+
+          {/* Quick Demo Pickers */}
+          <div className="flex flex-wrap md:flex-col gap-2 shrink-0">
+            <span className="text-xs text-indigo-200 font-semibold mb-0.5">نماذج تجربة سريعة:</span>
+            <button
+              onClick={loadDemoFolder}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer border border-white/10"
+            >
+              <FolderTree className="w-4 h-4 text-emerald-300" />
+              <span>مجلد مشروع كامل (6 ملفات)</span>
+            </button>
+            <button
+              onClick={loadDemoLargeFile}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer border border-white/10"
+            >
+              <Film className="w-4 h-4 text-amber-300" />
+              <span>فيديو 4K ضخم (1.42 GB)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Upload Area & Target Device */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols: File & Folder Pickers */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Hidden inputs */}
+          <input
+            type="file"
+            multiple
+            ref={fileInputRef}
+            onChange={handleFilesChosen}
+            className="hidden"
+          />
+          <input
+            type="file"
+            ref={folderInputRef}
+            // @ts-expect-error webkitdirectory is standard in browsers but not typed in react standard HTMLProps
+            webkitdirectory=""
+            directory=""
+            onChange={handleFolderChosen}
+            className="hidden"
+          />
+
+          {/* Dropzone Card */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative rounded-3xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+              isDragging
+                ? 'border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/30 scale-[1.01]'
+                : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 hover:border-indigo-400'
+            }`}
+          >
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 shadow-xs">
+              <UploadCloud className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+              اسحب وأفلت الملفات أو المجلدات هنا
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+              يدعم إرسال جميع أنواع الملفات (فيديو، صوت، تطبيقات APK، مستندات) ومجلدات كاملة مع الحفاظ على هيكل المجلدات الداخلي.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+              >
+                <FilePlus className="w-4 h-4" />
+                <span>اختيار ملفات</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              >
+                <FolderUp className="w-4 h-4" />
+                <span>إرسال مجلد بالكامل</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Selected Items List & Folder Inspector */}
+          {selectedItems.length > 0 && (
+            <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  {isFolderMode ? (
+                    <FolderTree className="w-5 h-5 text-emerald-500" />
+                  ) : (
+                    <HardDrive className="w-5 h-5 text-indigo-500" />
+                  )}
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                      {isFolderMode ? `مجلد: ${folderName}` : 'الملفات المختارة للإرسال'}
+                    </h4>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {selectedItems.length} عنصر • الحجم الإجمالي: {formatBytes(totalBytes)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>تفريغ القائمة</span>
+                </button>
+              </div>
+
+              {/* Items scroll */}
+              <div className="mt-3 divide-y divide-slate-100 dark:divide-slate-800/60 max-h-72 overflow-y-auto pr-1">
+                {selectedItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 px-2 rounded-xl transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="shrink-0 p-2 rounded-xl bg-slate-100 dark:bg-slate-800">
+                        {getFileIcon(item.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {item.name}
+                        </p>
+                        {item.relativePath && item.relativePath !== item.name && (
+                          <p className="text-[11px] text-slate-400 truncate dir-ltr text-right">
+                            {item.relativePath}
+                          </p>
+                        )}
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {formatBytes(item.size)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Col: Target Device Selection & Transfer Initiation */}
+        <div className="space-y-4">
+          <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Wifi className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  الأجهزة المستلمة القريبة
+                </h3>
+              </div>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                {nearbyDevices.length} جهاز متصل
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              اختر الجهاز الذي ترغب بإرسال الملفات إليه عبر اتصال الواي فاي المباشر:
+            </p>
+
+            {/* Devices list */}
+            <div className="space-y-2.5">
+              {nearbyDevices.map((device) => {
+                const isSelected = selectedDevice?.id === device.id;
+                return (
+                  <div
+                    key={device.id}
+                    onClick={() => setSelectedDevice(device)}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      isSelected
+                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-xs"
+                        style={{ backgroundColor: device.avatarColor }}
+                      >
+                        {device.name.slice(0, 1)}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                          {device.name}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                            {device.ipAddress}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                            {device.frequency}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end">
+                      {isSelected ? (
+                        <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                      ) : (
+                        <span className="text-xs text-slate-400 font-medium">
+                          {device.signalStrength}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Error banner if any */}
+            {errorMsg && (
+              <div className="mt-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            {/* Transfer Specs Summary */}
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-400">
+              <div className="flex justify-between">
+                <span>حجم البافر المقترح:</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-200">{settings.chunkSizeKB} KB (فائق)</span>
+              </div>
+              <div className="flex justify-between">
+                <span>التحقق من سلامة البيانات:</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">SHA-256 فحص فوري</span>
+              </div>
+              <div className="flex justify-between">
+                <span>مسار الحفظ الافتراضي للمستلم:</span>
+                <span className="font-mono text-[10px] text-slate-500 truncate max-w-[170px] dir-ltr text-left">
+                  {settings.savePath}
+                </span>
+              </div>
+            </div>
+
+            {/* Launch Transfer Button */}
+            <button
+              onClick={handleStart}
+              disabled={selectedItems.length === 0}
+              className={`mt-5 w-full py-3.5 px-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
+                selectedItems.length > 0
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none'
+              }`}
+            >
+              <Zap className="w-4 h-4 text-amber-300" />
+              <span>
+                {selectedItems.length > 0
+                  ? `بدء الإرسال فائق السرعة (${formatBytes(totalBytes)})`
+                  : 'حدد الملفات أو المجلد أولاً'}
+              </span>
+            </button>
+          </div>
+
+          {/* Developer credit banner */}
+          <div className="rounded-2xl p-3.5 bg-indigo-50/60 dark:bg-slate-800/50 border border-indigo-100 dark:border-slate-800 text-center">
+            <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-400">
+              تطوير: سامي القادري 777484160
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
